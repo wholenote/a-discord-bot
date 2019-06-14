@@ -6,21 +6,23 @@ from discord.voice_client import VoiceClient
 
 import pyaudio
 
-bot = commands.Bot(command_prefix='#')
+client = discord.Client()
 
-@bot.event
+@client.event
 async def on_ready():
-    print('Ready to steal your information.')
+    print('Ready to listen.')
 
-@bot.command()
-async def start(ctx):
-    '''
-    Bot joins the channel you are in. Google Speech Recognition starts.
-    '''
-    author = ctx.message.author
-    channel = author.voice_channel
-    await bot.join_voice_channel(channel)
-
-
+@client.event
+async def on_message(message):
+    if message.author == client.user:
+        return
+    if message.content.startswith('#start'):
+        client.connect()
+        while client.is_connected():
+            await client.say('connected')
+            if message.content.startswith('#stop'):
+                return
+            
+    
 
 bot.run('token here')
