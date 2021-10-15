@@ -1,4 +1,7 @@
 import discord
+import os
+from dotenv import load_dotenv
+from textblob import TextBlob
 
 async def test_func(message, args):
     await message.channel.send('test success!')
@@ -16,29 +19,32 @@ def parse_msg(msg):
     else:
         return None
 
-def exec_cmd(cmd, message):
+async def exec_cmd(cmd, message):
     if cmd.get('cmd') == 'test':
-        test_func(message, cmd.get('arguments'))
+        await test_func(message, cmd.get('arguments'))
     return
 
-def process_cmd(message):
+async def process_cmd(message):
     cmd = parse_msg(message.content)
     if cmd:
-        exec_cmd(cmd, message)
+        await exec_cmd(cmd, message)
     return
 
 if __name__ == '__main__':
+    load_dotenv()
     client = discord.Client()
 
     @client.event
     async def on_ready():
-        print(f'Logged in as:\nUsername: {client.user.name}\nID: {client.user.id}.')
+        print(f'Logged in as:\nUsername: {client.user.name}\nID: {client.user.id}')
 
     @client.event
     async def on_message(message):
         if message.author == client.user:
             return
         if message.content.startswith('>'):
-            process_cmd(message)    
+            await process_cmd(message)
+        if any(s in message.content for s in os.getenv('BADWORDS').split(',')) or TextBlob(message.content).sentiment.polarity < 0:
+            await message.channel.send('bro wtf')
 
-    client.run('token here')
+    client.run(os.getenv('DISCORD_TOKEN'))
