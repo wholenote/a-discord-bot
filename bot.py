@@ -47,9 +47,16 @@ async def on_command_error(ctx, error):
 @bot.command()
 async def test(ctx):
     em = discord.Embed(color=discord.Color.green())
-    em.title = "Test Success!"
+    em.title = 'Test Success!'
     await ctx.send(embed=em)
     return
+
+@bot.command()
+async def help(ctx):
+    em = discord.Embed(color=discord.Color.green())
+    em.title = 'Command Documentation'
+    em.description = '>test\n>ping\n>monke\n>austin\n>joke'
+    await ctx.send(embed=em)
 
 @bot.command()
 async def ping(ctx):
@@ -62,7 +69,7 @@ async def ping(ctx):
 @bot.command()
 @commands.cooldown(1, 30, commands.BucketType.guild)
 async def monke(ctx):
-    # TODO: pull posts from r/monke
+    # TODO: pull posts from r/monke, ig daily.monkey.posts, also need to account for videos
     looter = ProfileLooter('a_p_e_k_i_n_g')
     posts = []
     for media in looter.medias():
@@ -93,6 +100,24 @@ async def austin(ctx):
         await ctx.send(embed=em)
     return
 
+@bot.command()
+@commands.cooldown(2, 5, commands.BucketType.user)
+async def joke(ctx):
+    r = requests.get('https://v2.jokeapi.dev/joke/Dark')
+    if r.json()['type'] == 'twopart':
+        em = discord.Embed(color=discord.Color.green())
+        em.title = "Joke"
+        em.description = f'{r.json()["setup"]}\n\n||{r.json()["delivery"]}||'
+        await ctx.send(embed=em)
+    else:
+        em = discord.Embed(color=discord.Color.green())
+        em.title = "Joke"
+        em.description = f'{r.json()["joke"]}'
+        await ctx.send(embed=em)
+    return
+
+# change nickname command
+# noke
 
 load_dotenv()
 bot.run(os.getenv('DISCORD_TOKEN'))
