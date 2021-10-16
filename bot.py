@@ -1,50 +1,98 @@
 import discord
 import os
+import requests
+import random
+import traceback
 from dotenv import load_dotenv
 from textblob import TextBlob
+from discord.ext import commands
+from instalooter.looters import PostLooter, ProfileLooter
 
-async def test_func(message, args):
-    await message.channel.send('test success!')
-    return
+intents = discord.Intents.default()
+intents.members = True
 
-cmd_list = ['test']
+bot =  commands.Bot(command_prefix='>', description='', intents=intents)
 
-def parse_msg(msg):
-    cmd = {}
-    msg = msg[1:].strip().split(' ')
-    if msg[0] in cmd_list:
-        cmd['cmd'] = msg.pop(0)
-        cmd['arguments'] = ' '.join(msg) # leave argument parsing to specific cmd function
-        return cmd
+@bot.event
+async def on_ready():
+    print(f'Logged in as:\nUsername: {bot.user.name}\nID: {bot.user.id}')
+
+@bot.event
+async def on_message(ctx):
+    if ctx.author == bot.user:
+        return
+    if any(s in ctx.content for s in os.getenv('BADWORDS').split(',')) or TextBlob(ctx.content).sentiment.polarity < 0:
+        # reply = random.choice(['bro wtf!', str(requests.get('https://evilinsult.com/generate_insult.php?lang=en&type=text').text)])
+        reply = str(requests.get('https://evilinsult.com/generate_insult.php?lang=en&type=text').text)
+        await ctx.channel.send(reply)
+    await bot.process_commands(ctx)
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        pass
+    elif isinstance(error, commands.MissingRequiredArgument):
+        pass
+    elif isinstance(error, commands.NotOwner):
+        pass
+    elif isinstance(error, commands.NoPrivateMessage):
+        await ctx.channel.send("You can't use that command in a private message")
+    elif isinstance(error, commands.CheckFailure):
+        await ctx.channel.send("You don't have the required permissions to do that")
+    elif isinstance(error, commands.CommandOnCooldown):
+        await ctx.channel.send(error)
     else:
-        return None
+        print(''.join(traceback.format_exception(type(error), error, error.__traceback__)))
 
-async def exec_cmd(cmd, message):
-    if cmd.get('cmd') == 'test':
-        await test_func(message, cmd.get('arguments'))
+@bot.command()
+async def test(ctx):
+    em = discord.Embed(color=discord.Color.green())
+    em.title = "Test Success!"
+    await ctx.send(embed=em)
     return
 
-async def process_cmd(message):
-    cmd = parse_msg(message.content)
-    if cmd:
-        await exec_cmd(cmd, message)
+@bot.command()
+async def ping(ctx):
+    '''Pong! Get the bot's response time'''
+    em = discord.Embed(color=discord.Color.green())
+    em.title = "Pong!"
+    em.description = f'{bot.latency * 1000} ms'
+    await ctx.send(embed=em)
+
+@bot.command()
+@commands.cooldown(1, 30, commands.BucketType.guild)
+async def monke(ctx):
+    # TODO: pull posts from r/monke
+    looter = ProfileLooter('a_p_e_k_i_n_g')
+    posts = []
+    for media in looter.medias():
+        posts.append(media)
+    post = random.randint(0, len(posts))
+    url_code = posts[post]['shortcode']
+    post_id = posts[post]['id']
+    PostLooter(url_code).download('~/a-discord-bot', media_count=1)
+
+    await ctx.channel.send(file=discord.File(post_id + '.jpg'))
+
+    os.remove(post_id + '.jpg')
     return
 
-if __name__ == '__main__':
-    load_dotenv()
-    client = discord.Client()
+@bot.command()
+@commands.cooldown(2, 5, commands.BucketType.user)
+async def austin(ctx):
+    r = requests.get('https://v2.jokeapi.dev/joke/Pun')
+    if r.json()['type'] == 'twopart':
+        em = discord.Embed(color=discord.Color.green())
+        em.title = "An Austin Joke"
+        em.description = f'{r.json()["setup"]}\n\n||{r.json()["delivery"]}||'
+        await ctx.send(embed=em)
+    else:
+        em = discord.Embed(color=discord.Color.green())
+        em.title = "An Austin Joke"
+        em.description = f'{r.json()["joke"]}'
+        await ctx.send(embed=em)
+    return
 
-    @client.event
-    async def on_ready():
-        print(f'Logged in as:\nUsername: {client.user.name}\nID: {client.user.id}')
 
-    @client.event
-    async def on_message(message):
-        if message.author == client.user:
-            return
-        if message.content.startswith('>'):
-            await process_cmd(message)
-        if any(s in message.content for s in os.getenv('BADWORDS').split(',')) or TextBlob(message.content).sentiment.polarity < 0:
-            await message.channel.send('bro wtf')
-
-    client.run(os.getenv('DISCORD_TOKEN'))
+load_dotenv()
+bot.run(os.getenv('DISCORD_TOKEN'))
