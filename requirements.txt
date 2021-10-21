@@ -2,3 +2,4 @@ requests
 python-dotenv
 textblob
 instalooter
+discord.py
