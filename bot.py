@@ -97,7 +97,7 @@ async def austin(ctx):
 @bot.command()
 @commands.cooldown(2, 5, commands.BucketType.user)
 async def joke(ctx):
-    r = requests.get('https://v2.jokeapi.dev/joke/Dark')
+    r = requests.get('https://v2.jokeapi.dev/joke/Any?blacklistFlags=racist')
     if r.json()['type'] == 'twopart':
         em = discord.Embed(color=discord.Color.green())
         em.title = "Joke"
