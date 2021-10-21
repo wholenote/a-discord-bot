@@ -52,13 +52,6 @@ async def test(ctx):
     return
 
 @bot.command()
-async def help(ctx):
-    em = discord.Embed(color=discord.Color.green())
-    em.title = 'Command Documentation'
-    em.description = '>test\n>ping\n>monke\n>austin\n>joke'
-    await ctx.send(embed=em)
-
-@bot.command()
 async def ping(ctx):
     '''Pong! Get the bot's response time'''
     em = discord.Embed(color=discord.Color.green())
@@ -87,6 +80,7 @@ async def monke(ctx):
 @bot.command()
 @commands.cooldown(2, 5, commands.BucketType.user)
 async def austin(ctx):
+    '''Get an Austin joke'''
     r = requests.get('https://v2.jokeapi.dev/joke/Pun')
     if r.json()['type'] == 'twopart':
         em = discord.Embed(color=discord.Color.green())
