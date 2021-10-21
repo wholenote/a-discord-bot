@@ -63,18 +63,18 @@ async def ping(ctx):
 @commands.cooldown(1, 30, commands.BucketType.guild)
 async def monke(ctx):
     # TODO: pull posts from r/monke, ig daily.monkey.posts, also need to account for videos
-    looter = ProfileLooter('a_p_e_k_i_n_g')
-    posts = []
-    for media in looter.medias():
-        posts.append(media)
-    post = random.randint(0, len(posts))
-    url_code = posts[post]['shortcode']
-    post_id = posts[post]['id']
-    PostLooter(url_code).download('~/a-discord-bot', media_count=1)
+    # looter = ProfileLooter('a_p_e_k_i_n_g')
+    # posts = []
+    # for media in looter.medias():
+    #     posts.append(media)
+    # post = random.randint(0, len(posts))
+    # url_code = posts[post]['shortcode']
+    # post_id = posts[post]['id']
+    # PostLooter(url_code).download('~/a-discord-bot', media_count=1)
 
-    await ctx.channel.send(file=discord.File(post_id + '.jpg'))
+    # await ctx.channel.send(file=discord.File(post_id + '.jpg'))
 
-    os.remove(post_id + '.jpg')
+    # os.remove(post_id + '.jpg')
     return
 
 @bot.command()
