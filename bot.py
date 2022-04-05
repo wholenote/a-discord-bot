@@ -3,10 +3,12 @@ import os
 import requests
 import random
 import traceback
+import time
+import asyncio
 from dotenv import load_dotenv
 from textblob import TextBlob
 from discord.ext import commands
-from instalooter.looters import PostLooter, ProfileLooter
+from datetime import datetime
 
 intents = discord.Intents.default()
 intents.members = True
@@ -21,10 +23,8 @@ async def on_ready():
 async def on_message(ctx):
     if ctx.author == bot.user:
         return
-    if any(s in ctx.content for s in os.getenv('BADWORDS').split(',')) or TextBlob(ctx.content).sentiment.polarity < 0:
-        # reply = random.choice(['bro wtf!', str(requests.get('https://evilinsult.com/generate_insult.php?lang=en&type=text').text)])
-        reply = str(requests.get('https://evilinsult.com/generate_insult.php?lang=en&type=text').text)
-        await ctx.channel.send(reply)
+    # if TextBlob(ctx.content).sentiment.polarity < 0:
+        
     await bot.process_commands(ctx)
 
 @bot.event
@@ -53,34 +53,16 @@ async def test(ctx):
 
 @bot.command()
 async def ping(ctx):
-    '''Pong! Get the bot's response time'''
+    '''Pong! Get the bot's response time.'''
     em = discord.Embed(color=discord.Color.green())
     em.title = "Pong!"
     em.description = f'{bot.latency * 1000} ms'
     await ctx.send(embed=em)
 
 @bot.command()
-@commands.cooldown(1, 30, commands.BucketType.guild)
-async def monke(ctx):
-    # TODO: pull posts from r/monke, ig daily.monkey.posts, also need to account for videos
-    # looter = ProfileLooter('a_p_e_k_i_n_g')
-    # posts = []
-    # for media in looter.medias():
-    #     posts.append(media)
-    # post = random.randint(0, len(posts))
-    # url_code = posts[post]['shortcode']
-    # post_id = posts[post]['id']
-    # PostLooter(url_code).download('~/a-discord-bot', media_count=1)
-
-    # await ctx.channel.send(file=discord.File(post_id + '.jpg'))
-
-    # os.remove(post_id + '.jpg')
-    return
-
-@bot.command()
 @commands.cooldown(2, 5, commands.BucketType.user)
 async def austin(ctx):
-    '''Get an Austin joke'''
+    '''Get an Austin joke.'''
     r = requests.get('https://v2.jokeapi.dev/joke/Pun')
     if r.json()['type'] == 'twopart':
         em = discord.Embed(color=discord.Color.green())
@@ -97,6 +79,7 @@ async def austin(ctx):
 @bot.command()
 @commands.cooldown(2, 5, commands.BucketType.user)
 async def joke(ctx):
+    '''Random Joke.'''
     r = requests.get('https://v2.jokeapi.dev/joke/Any?blacklistFlags=racist')
     if r.json()['type'] == 'twopart':
         em = discord.Embed(color=discord.Color.green())
@@ -110,8 +93,69 @@ async def joke(ctx):
         await ctx.send(embed=em)
     return
 
-# change nickname command
-# noke
+@bot.command()
+async def wordle(ctx):
+    '''Play wordle with a random word.'''
+    
+    worlde_game_state = False
+
+    if ctx.channel.id != 277973665230880770:
+        return
+    if worlde_game_state:
+        await ctx.send("A wordle game is in progress. Try again later.")
+        return
+
+    worlde_game_state = True
+
+    tiles_msg = await ctx.send("Word picked. Start guessing...")
+    check = lambda m: m.channel == ctx.channel
+
+    word_size = 5
+    seed = int(time.mktime(datetime.now().timetuple()))
+    cur_tiles = ""
+    guess_count = 0
+
+    while True:
+        try:
+            guess = await bot.wait_for("message", check=check, timeout=120)
+        except asyncio.TimeoutError:
+            await ctx.send(">wordle game cancelled, timed out.")
+            worlde_game_state = False
+            return
+
+        r = requests.get('https://v1.wordle.k2bd.dev/random', params={'guess': guess.content, 'size': word_size, 'seed': seed})
+        word_check = requests.get('https://api.dictionaryapi.dev/api/v2/entries/en/{}'.format(guess.content))
+
+        if r.status_code == 200 and word_check.status_code == 200:
+            guess_count += 1
+            for i in range(word_size):
+                if r.json()[i]['result'] == "correct":
+                    cur_tiles += ":green_square:"
+                elif r.json()[i]['result'] == "present":
+                    cur_tiles += ":yellow_square:"
+                elif r.json()[i]['result'] == "absent":
+                    cur_tiles += ":black_large_square:"
+            cur_tiles += "\n"
+
+            # keep wordle game board on screen
+            if guess_count > 6:
+                tiles_msg = await ctx.send(content=cur_tiles)
+                guess_count = 0
+            else:
+                await tiles_msg.edit(content=cur_tiles)
+
+            # correct guess logic
+            if cur_tiles.split("\n")[-2] == ":green_square:"*word_size:
+                await ctx.send("{} wins!".format(guess.author.name))
+                worlde_game_state = False
+                channel = bot.get_channel(837436992232488961)
+                await channel.send("%add-money bank <@{}> 1000".format(ctx.author.id))
+                return
+        else:
+            print(r.text)
+            print(word_check.text)
+
+worlde_game_state = False
 
 load_dotenv()
 bot.run(os.getenv('DISCORD_TOKEN'))
