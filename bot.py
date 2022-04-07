@@ -242,7 +242,7 @@ async def udefine(ctx, word: str):
         em.description = f"**{word}**:\n\n{r.json()['list'][index]['definition'].replace('[', '').replace(']','')}\n\n*{r.json()['list'][index]['example'].replace('[', '').replace(']','')}*"
         await interaction.edit_origin(embed=em)
         
-    await ctx.send(embed=em, components=[bot.components_manager.add_callback(Button(label="Next", custom_id="next"), next_callback)])
+    await ctx.send(embed=em, components=[bot.components_manager.add_callback(Button(label="Penis", custom_id="next"), next_callback)])
 
 load_dotenv()
 bot.run(os.getenv('DISCORD_TOKEN'))
