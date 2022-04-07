@@ -10,11 +10,16 @@ from dotenv import load_dotenv
 from textblob import TextBlob
 from discord.ext import commands
 from datetime import datetime
+from discord_components import DiscordComponents, Button, Interaction
 
 intents = discord.Intents.default()
 intents.members = True
 
-bot =  commands.Bot(command_prefix='>', description='', intents=intents)
+bot = commands.Bot(command_prefix='>', description='', intents=intents)
+DiscordComponents(bot)
+
+wordle_game_state = False
+scramble_game_state = False
 
 @bot.event
 async def on_ready():
@@ -24,7 +29,6 @@ async def on_ready():
 async def on_message(ctx):
     if ctx.author == bot.user:
         return
-    # if TextBlob(ctx.content).sentiment.polarity < 0:
         
     await bot.process_commands(ctx)
 
@@ -37,9 +41,9 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.NotOwner):
         pass
     elif isinstance(error, commands.NoPrivateMessage):
-        await ctx.channel.send("You can't use that command in a private message")
+        await ctx.channel.send("You can't use that command in a private message.")
     elif isinstance(error, commands.CheckFailure):
-        await ctx.channel.send("You don't have the required permissions to do that")
+        await ctx.channel.send("You don't have the required permissions to do that.")
     elif isinstance(error, commands.CommandOnCooldown):
         await ctx.channel.send(error)
     else:
@@ -47,6 +51,7 @@ async def on_command_error(ctx, error):
 
 @bot.command()
 async def test(ctx):
+    '''Test Command.'''
     em = discord.Embed(color=discord.Color.green())
     em.title = 'Test Success!'
     await ctx.send(embed=em)
@@ -95,24 +100,24 @@ async def joke(ctx):
     return
 
 @bot.command()
-@commands.cooldown(1, 20, commands.BucketType.guild)
+@commands.cooldown(1, 1, commands.BucketType.guild)
 async def wordle(ctx):
     '''Play wordle with a random word.'''
     
-    worlde_game_state = False
+    global wordle_game_state
 
     if ctx.channel.id != 277973665230880770:
         return
-    if worlde_game_state:
+    if wordle_game_state:
         await ctx.send("A wordle game is in progress. Try again later.")
         return
 
-    worlde_game_state = True
+    wordle_game_state = True
 
     tiles_msg = await ctx.send("Word picked. Start guessing...")
     check = lambda m: m.channel == ctx.channel and len(m.content) == 5
 
-    words_file = open("actual_wordle_words.txt", "r")
+    words_file = open("wordle_words.txt", "r")
     word_list = words_file.read().split("\n")
     words_file.close()
     word_size = 5
@@ -127,12 +132,10 @@ async def wordle(ctx):
             guess = await bot.wait_for("message", check=check, timeout=120)
         except asyncio.TimeoutError:
             await ctx.send(f"Wordle game ended, timed out. The word was ||{word}||.")
-            worlde_game_state = False
+            wordle_game_state = False
             return
 
-        # r = requests.get('https://v1.wordle.k2bd.dev/random', params={'guess': guess.content, 'size': word_size, 'seed': seed})
         r = requests.get('https://v1.wordle.k2bd.dev/word/{}'.format(word), params={'guess': (guess.content).lower()})
-        # word_check = requests.get('https://api.dictionaryapi.dev/api/v2/entries/en/{}'.format(guess.content))
 
         if r.status_code == 200 and guess.content in word_list:
             guess_count += 1
@@ -153,32 +156,31 @@ async def wordle(ctx):
             else:
                 await tiles_msg.edit(content=cur_tiles)
 
-            # # correct guess logic
-            # if cur_tiles.split("\n")[-2] == ":green_square:"*word_size:
-            #     await ctx.send("{} wins!".format(guess.author.name))
-            #     worlde_game_state = False
-            #     channel = bot.get_channel(837436992232488961)
-            #     await channel.send("%add-money bank <@{}> 1000".format(ctx.author.id))
-            #     return
-
             if (guess.content).lower() == word:
                 await ctx.send("<@{}> wins!".format(guess.author.id))
-                worlde_game_state = False
+                wordle_game_state = False
                 channel = bot.get_channel(837436992232488961)
                 await channel.send("%add-money bank <@{}> 1000".format(guess.author.id))
                 return
-        else:
+        elif r.status_code != 200:
             print(r.text)
 
 @bot.command()
-@commands.cooldown(1, 10, commands.BucketType.guild)
+@commands.cooldown(1, 1, commands.BucketType.guild)
 async def scramble(ctx):
     '''Play scrambled with a random 5 letter word.'''
 
+    global scramble_game_state
+
     if ctx.channel.id != 277973665230880770:
         return
+    if scramble_game_state:
+        await ctx.send("A wordle game is in progress. Try again later.")
+        return
     
-    words_file = open("actual_wordle_words.txt", "r")
+    scramble_game_state = True
+
+    words_file = open("wordle_words.txt", "r")
     word_list = words_file.read().split("\n")
     words_file.close()
 
@@ -202,13 +204,45 @@ async def scramble(ctx):
             guess = await bot.wait_for("message", check=check, timeout=120)
         except asyncio.TimeoutError:
             await ctx.send(f"Scramble game ended, timed out. The word was ||{word}||.")
+            scramble_game_state = False
             return
         
         if (guess.content).lower() == word:
             await ctx.send("<@{}> wins!".format(guess.author.id))
+            scramble_game_state = False
             return
 
-worlde_game_state = False
+@bot.command()
+@commands.cooldown(5, 5, commands.BucketType.guild)
+async def udefine(ctx, word: str):
+    '''Lookup Urban Dictionary definition.'''
+    url = "https://mashape-community-urban-dictionary.p.rapidapi.com/define"
+
+    querystring = {"term": word}
+
+    headers = {
+        "X-RapidAPI-Host": "mashape-community-urban-dictionary.p.rapidapi.com",
+        "X-RapidAPI-Key": os.getenv('URBAND_TOKEN')
+    }
+
+    r = requests.request("GET", url, headers=headers, params=querystring)
+
+    index = 0
+    em = discord.Embed(color=discord.Color.green())
+    em.title = "Urban Dictionary Definition"
+    em.description = f"**{word}**:\n\n{r.json()['list'][0]['definition'].replace('[', '').replace(']','')}\n\n*{r.json()['list'][0]['example'].replace('[', '').replace(']','')}*"
+
+    async def next_callback(interaction: Interaction):
+        nonlocal index
+        if index == len(r.json()['list']) - 1:
+            index = 0
+        else:
+            index += 1
+        
+        em.description = f"**{word}**:\n\n{r.json()['list'][index]['definition'].replace('[', '').replace(']','')}\n\n*{r.json()['list'][index]['example'].replace('[', '').replace(']','')}*"
+        await interaction.edit_origin(embed=em)
+        
+    await ctx.send(embed=em, components=[bot.components_manager.add_callback(Button(label="Next", custom_id="next"), next_callback)])
 
 load_dotenv()
 bot.run(os.getenv('DISCORD_TOKEN'))
