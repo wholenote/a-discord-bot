@@ -6,6 +6,9 @@ import traceback
 import time
 import asyncio
 import random
+import praw
+import random
+
 from dotenv import load_dotenv
 from textblob import TextBlob
 from discord.ext import commands
@@ -17,6 +20,14 @@ intents.members = True
 
 bot = commands.Bot(command_prefix='>', description='', intents=intents)
 DiscordComponents(bot)
+
+reddit = praw.Reddit(
+    client_id="t_LYZS2k_gXMBHeaTtOTqg",
+    client_secret="9wkDlpUV06_BiXW7DdBJVsMfe2aBTw",
+    password="Brian2011",
+    user_agent="testing",
+    username="DiscordMonkeBot",
+)
 
 wordle_game_state = False
 scramble_game_state = False
@@ -243,6 +254,22 @@ async def udefine(ctx, word: str):
         await interaction.edit_origin(embed=em)
         
     await ctx.send(embed=em, components=[bot.components_manager.add_callback(Button(label="Penis", custom_id="next"), next_callback)])
+
+@bot.command()
+async def hololive(ctx):
+    '''Random pic of your favorite Hololive'''
+    subreddit = reddit.subreddit("hololewd")
+    submissions = reddit.subreddit('hololewd').hot()
+    post_to_pick = random.randint(1,10)
+    for i in range(0, post_to_pick):
+        submission = next(x for x in submissions if not x.stickied)
+    
+    name = 'hololewd'
+    em = discord.Embed('hololewd').title()
+    em.set_image(url=submission.url)
+
+    await ctx.send(em)
+
 
 load_dotenv()
 bot.run(os.getenv('DISCORD_TOKEN'))
