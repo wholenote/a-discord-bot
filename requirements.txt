@@ -3,3 +3,4 @@ python-dotenv
 textblob
 instalooter
 discord.py
+discord-components
