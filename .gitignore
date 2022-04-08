@@ -1,2 +1,4 @@
 .vscode
 .env
+wordle_words.txt
+get-pip.py
