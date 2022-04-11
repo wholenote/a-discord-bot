@@ -15,14 +15,14 @@
 <br />
 <div align="center">
   <a href="https://github.com/othneildrew/Best-README-Template">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
+    <img src="https://cdn.discordapp.com/attachments/961833034540261397/962967512100794378/ap_637848761074_0.webp" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">MonkeBot</h3>
 
   <p align="center">
     <br />
-    <a href="https://github.com/othneildrew/Best-README-Template">View Demo</a>
+    <a href="https://github.com/wholenote/a-discord-bot">View Demo</a>
     ·
     <a href="https://github.com/othneildrew/Best-README-Template/issues">Report Bug</a>
     ·
@@ -44,28 +44,28 @@
 
 ### Environment Setup
 
-1. Create an Discord Application in the Developer Portal
+1. Create an Discord Application in the Developer Portal.
 2. In the newly created Application, make a Bot and turn on the privileged member intent. 
 3. Go to the OAuth2 tab and copy the Bot's Discord Token for later.
-4. Clone the repo
+4. Clone the repo.
    ```sh
    git clone https://github.com/wholenote/a-discord-bot.git
    ```
-3. Install NPM packages
+3. Install Python packages.
    ```sh
    pip install -r requirements.txt
    ```
-4. Create a .env file in the project directory and enter the Bot's Discord Token in it
+4. Create a .env file in the project directory and enter the Bot's Discord Token in it.
    ```
    DISCORD_TOKEN=1234567890
    ```
-5. Get a Urban Dictionary API key and add it to the .env file
+5. Get a Urban Dictionary API key and add it to the .env file.
    ```
    DISCORD_TOKEN=1234567890
    URBAND_TOKEN=0987654321
    ```
-6. Create a file called `wordle_words.txt`(5 letter words, one line each) in the project directory
-7. Run the bot
+6. Create a file called `wordle_words.txt` (5 letter words, one line each) in the project directory.
+7. Run the bot.
   ```sh
   python bot.py
   ```
@@ -78,11 +78,11 @@
 * Docker
 
 ### Commands
-To create the Docker image
+To create the Docker image:
 ```
 sudo docker build -t monkebot .
 ```
-To start the Docker container
+To start the Docker container:
 ```
 sudo docker run -d --env-file server.env monkebot
 ```
@@ -150,16 +150,14 @@ Use this space to list resources you find helpful and would like to give credit 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/othneildrew/Best-README-Template.svg?style=for-the-badge
-[contributors-url]: https://github.com/othneildrew/Best-README-Template/graphs/contributors
+[contributors-url]: https://github.com/wholenote/a-discord-bot/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/othneildrew/Best-README-Template.svg?style=for-the-badge
-[forks-url]: https://github.com/othneildrew/Best-README-Template/network/members
+[forks-url]: https://github.com/wholenote/a-discord-bot/network/members
 [stars-shield]: https://img.shields.io/github/stars/othneildrew/Best-README-Template.svg?style=for-the-badge
-[stars-url]: https://github.com/othneildrew/Best-README-Template/stargazers
+[stars-url]: https://github.com/wholenote/a-discord-bot/stargazers
 [issues-shield]: https://img.shields.io/github/issues/othneildrew/Best-README-Template.svg?style=for-the-badge
-[issues-url]: https://github.com/othneildrew/Best-README-Template/issues
+[issues-url]: https://github.com/wholenote/a-discord-bot/issues
 [license-shield]: https://img.shields.io/github/license/othneildrew/Best-README-Template.svg?style=for-the-badge
-[license-url]: https://github.com/othneildrew/Best-README-Template/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/othneildrew
+[license-url]: https://github.com/wholenote/a-discord-bot/blob/master/LICENSE.txt
 [product-screenshot]: images/screenshot.png
 
