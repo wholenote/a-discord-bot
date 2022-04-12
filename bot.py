@@ -7,6 +7,7 @@ import time
 import asyncio
 import random
 import praw
+import asyncpraw
 import random
 
 from dotenv import load_dotenv
@@ -18,7 +19,7 @@ from discord_components import DiscordComponents, Button, Interaction
 intents = discord.Intents.default()
 intents.members = True
 
-bot = commands.Bot(command_prefix='>', description='', intents=intents)
+bot = commands.Bot(command_prefix='rishabh ', description='', intents=intents)
 DiscordComponents(bot)
 
 reddit = praw.Reddit(
@@ -258,17 +259,12 @@ async def udefine(ctx, word: str):
 @bot.command()
 async def hololive(ctx):
     '''Random pic of your favorite Hololive'''
-    subreddit = reddit.subreddit("hololewd")
-    submissions = reddit.subreddit('hololewd').hot()
-    post_to_pick = random.randint(1,10)
+    hololewd_submissions = reddit.subreddit('hololewd').hot()
+    post_to_pick = random.randint(1,100)
     for i in range(0, post_to_pick):
-        submission = next(x for x in submissions if not x.stickied)
+        submission = next(x for x in hololewd_submissions if not x.stickied)
     
-    name = 'hololewd'
-    em = discord.Embed('hololewd').title()
-    em.set_image(url=submission.url)
-
-    await ctx.send(em)
+    await ctx.send(submission.url)
 
 
 load_dotenv()
