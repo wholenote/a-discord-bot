@@ -6,11 +6,28 @@ import traceback
 import time
 import asyncio
 import random
+import re
 from dotenv import load_dotenv
 from textblob import TextBlob
 from discord.ext import commands
 from datetime import datetime
 from discord_components import DiscordComponents, Button, Interaction
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+from mysql.connector import connect, Error 
+
+load_dotenv()
+
+nltk.download('vader_lexicon')
+
+try:
+    connection = connect(
+        host='localhost',
+        user='monkebot',
+        password=os.getenv('MYSQL_PW'),
+        database='guild')
+except Error as e:
+    print(e)
 
 intents = discord.Intents.default()
 intents.members = True
@@ -21,6 +38,31 @@ DiscordComponents(bot)
 wordle_game_state = False
 scramble_game_state = False
 
+def process_social_score(ctx):
+    global connection
+
+    msg = re.sub(r'https?://\S+', '', ctx.content)
+    msg = re.sub(r'<((@!?\d+)|(:.+?:\d+))>', '', msg)
+    blob = TextBlob(msg)
+    sia = SentimentIntensityAnalyzer()
+    msg_score = (blob.sentiment.polarity * 0.15 + sia.polarity_scores(msg)['compound']) * 1000
+    
+    # print(f'"{msg}" message social credit rating: {msg_score}, userid: {ctx.author.id}')
+
+    if msg_score != 0:
+        with connection.cursor() as cursor:
+            cursor.execute(f'SELECT user_id FROM users WHERE user_id={ctx.author.id}')
+            if cursor.fetchall():
+                # fetch current score
+                cursor.execute(f'SELECT social_score FROM users WHERE user_id={ctx.author.id}')
+                result = cursor.fetchall()
+                cur_score = result[0][0]
+                cursor.execute(f'UPDATE users SET social_score={cur_score + msg_score} WHERE user_id={ctx.author.id}')
+                connection.commit()
+            else:
+                cursor.execute(f'INSERT INTO users (user_id, social_score) VALUES ({ctx.author.id}, {msg_score})')
+                connection.commit()
+
 @bot.event
 async def on_ready():
     print(f'Logged in as:\nUsername: {bot.user.name}\nID: {bot.user.id}')
@@ -30,6 +72,10 @@ async def on_message(ctx):
     if ctx.author == bot.user:
         return
         
+    bots_role = discord.utils.find(lambda r: r.name == 'Bots', ctx.guild.roles)
+    if bots_role not in ctx.author.roles and ctx.channel.id == 272232225112850433:
+        process_social_score(ctx)
+
     await bot.process_commands(ctx)
 
 @bot.event
@@ -49,7 +95,7 @@ async def on_command_error(ctx, error):
     else:
         print(''.join(traceback.format_exception(type(error), error, error.__traceback__)))
 
-@bot.command()
+@bot.command(hidden=True)
 async def test(ctx):
     '''Test Command.'''
     em = discord.Embed(color=discord.Color.green())
@@ -64,6 +110,35 @@ async def ping(ctx):
     em.title = "Pong!"
     em.description = f'{bot.latency * 1000} ms'
     await ctx.send(embed=em)
+
+@bot.command()
+async def scredit(ctx, option=None):
+    '''Get social credit. Example Usage: >scredit or >scredit lb'''
+    global connection
+
+    if option == None:
+        with connection.cursor() as cursor:
+            cursor.execute(f'SELECT user_id, social_score FROM users WHERE user_id={ctx.author.id}')
+            result = cursor.fetchall()[0]
+            em = discord.Embed(color=discord.Color.blue())
+            em.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+            em.add_field(name='Social Credit Score:', value=result[1], inline=True)
+            await ctx.send(embed=em)
+    elif option == 'lb':
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT user_id, social_score FROM users ORDER BY social_score DESC')
+            result = cursor.fetchall()
+            em = discord.Embed(color=discord.Color.blue())
+            em.set_author(name='Social Credit Leaderboard')
+            description = ''
+            for i in range(len(result)):
+                user = await bot.fetch_user(result[i][0])
+                line = f'**{i+1}.**  {user.name} • {result[i][1]}'
+                description += line + '\n'
+            em.description = description
+            await ctx.send(embed=em)
+
+    return
 
 @bot.command()
 @commands.cooldown(2, 5, commands.BucketType.user)
@@ -101,12 +176,27 @@ async def joke(ctx):
 
 @bot.command()
 @commands.cooldown(1, 1, commands.BucketType.guild)
-async def wordle(ctx):
+async def wordle(ctx, option=None):
     '''Play wordle with a random word.'''
     
     global wordle_game_state
+    global connection
 
     if ctx.channel.id != 277973665230880770:
+        return
+    if option == 'lb':
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT user_id, wordle_score FROM users ORDER BY wordle_score DESC')
+            result = cursor.fetchall()
+            em = discord.Embed(color=discord.Color.blue())
+            em.set_author(name='Wordle Leaderboard')
+            description = ''
+            for i in range(len(result)):
+                user = await bot.fetch_user(result[i][0])
+                line = f'**{i+1}.**  {user.name} • {result[i][1]}'
+                description += line + '\n'
+            em.description = description
+            await ctx.send(embed=em)
         return
     if wordle_game_state:
         await ctx.send("A wordle game is in progress. Try again later.")
@@ -137,7 +227,7 @@ async def wordle(ctx):
 
         r = requests.get('https://v1.wordle.k2bd.dev/word/{}'.format(word), params={'guess': (guess.content).lower()})
 
-        if r.status_code == 200 and guess.content in word_list:
+        if r.status_code == 200 and (guess.content).lower() in word_list:
             guess_count += 1
             for i in range(word_size):
                 if r.json()[i]['result'] == "correct":
@@ -157,22 +247,47 @@ async def wordle(ctx):
                 await tiles_msg.edit(content=cur_tiles)
 
             if (guess.content).lower() == word:
-                await ctx.send("<@{}> wins!".format(guess.author.id))
+                await ctx.send("<@{}> wins! **+100 wordle pts**".format(guess.author.id))
                 wordle_game_state = False
-                channel = bot.get_channel(837436992232488961)
-                await channel.send("%add-money bank <@{}> 1000".format(guess.author.id))
+                with connection.cursor() as cursor:
+                    cursor.execute(f'SELECT user_id FROM users WHERE user_id={ctx.author.id}')
+                    if cursor.fetchall():
+                        # fetch current score
+                        cursor.execute(f'SELECT wordle_score FROM users WHERE user_id={ctx.author.id}')
+                        result = cursor.fetchall()
+                        cur_score = result[0][0]
+                        cursor.execute(f'UPDATE users SET wordle_score={cur_score + 100} WHERE user_id={ctx.author.id}')
+                        connection.commit()
+                    else:
+                        cursor.execute(f'INSERT INTO users (user_id, wordle_score) VALUES ({ctx.author.id}, {100})')
+                        connection.commit()
                 return
         elif r.status_code != 200:
             print(r.text)
 
 @bot.command()
 @commands.cooldown(1, 1, commands.BucketType.guild)
-async def scramble(ctx):
+async def scramble(ctx, option=None):
     '''Play scrambled with a random 5 letter word.'''
 
     global scramble_game_state
+    global connection
 
     if ctx.channel.id != 277973665230880770:
+        return
+    if option == 'lb':
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT user_id, scramble_score FROM users ORDER BY scramble_score DESC')
+            result = cursor.fetchall()
+            em = discord.Embed(color=discord.Color.blue())
+            em.set_author(name='Scramble Leaderboard')
+            description = ''
+            for i in range(len(result)):
+                user = await bot.fetch_user(result[i][0])
+                line = f'**{i+1}.**  {user.name} • {result[i][1]}'
+                description += line + '\n'
+            em.description = description
+            await ctx.send(embed=em)
         return
     if scramble_game_state:
         await ctx.send("A wordle game is in progress. Try again later.")
@@ -208,8 +323,20 @@ async def scramble(ctx):
             return
         
         if (guess.content).lower() == word:
-            await ctx.send("<@{}> wins!".format(guess.author.id))
+            await ctx.send("<@{}> wins! **+100 scramble pts**".format(guess.author.id))
             scramble_game_state = False
+            with connection.cursor() as cursor:
+                cursor.execute(f'SELECT user_id FROM users WHERE user_id={ctx.author.id}')
+                if cursor.fetchall():
+                    # fetch current score
+                    cursor.execute(f'SELECT scramble_score FROM users WHERE user_id={ctx.author.id}')
+                    result = cursor.fetchall()
+                    cur_score = result[0][0]
+                    cursor.execute(f'UPDATE users SET scramble_score={cur_score + 100} WHERE user_id={ctx.author.id}')
+                    connection.commit()
+                else:
+                    cursor.execute(f'INSERT INTO users (user_id, scramble_score) VALUES ({ctx.author.id}, {100})')
+                    connection.commit()
             return
 
 @bot.command()
@@ -244,5 +371,4 @@ async def udefine(ctx, word: str):
         
     await ctx.send(embed=em, components=[bot.components_manager.add_callback(Button(label="Penis", custom_id="next"), next_callback)])
 
-load_dotenv()
 bot.run(os.getenv('DISCORD_TOKEN'))

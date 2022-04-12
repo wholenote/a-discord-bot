@@ -4,3 +4,5 @@ textblob
 instalooter
 discord.py
 discord-components
+nltk
+mysql-connector-python

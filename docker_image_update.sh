@@ -8,6 +8,8 @@ git pull
 
 sudo docker build -t monkebot .
 
-sudo docker run -d --env-file server.env monkebot
+sudo docker run -d --env-file server.env --network=host monkebot
+
+sudo docker rm $(docker ps -a -f status=exited -q)
 
 sudo docker image prune -f
