@@ -1,3 +1,4 @@
+from re import A
 import discord
 import os
 import requests
@@ -6,23 +7,23 @@ import traceback
 import time
 import asyncio
 import random
-import praw
 import asyncpraw
 import random
 
 from dotenv import load_dotenv
 from textblob import TextBlob
 from discord.ext import commands
+from discord.voice_client import VoiceClient
 from datetime import datetime
 from discord_components import DiscordComponents, Button, Interaction
 
 intents = discord.Intents.default()
 intents.members = True
 
-bot = commands.Bot(command_prefix='rishabh ', description='', intents=intents)
+bot = commands.Bot(command_prefix='rishabh ', help_command=None, description='Rishy', intents=intents)
 DiscordComponents(bot)
 
-reddit = praw.Reddit(
+reddit = asyncpraw.Reddit(
     client_id="t_LYZS2k_gXMBHeaTtOTqg",
     client_secret="9wkDlpUV06_BiXW7DdBJVsMfe2aBTw",
     password="Brian2011",
@@ -60,6 +61,48 @@ async def on_command_error(ctx, error):
         await ctx.channel.send(error)
     else:
         print(''.join(traceback.format_exception(type(error), error, error.__traceback__)))
+
+@bot.command()
+async def help(ctx, args=None):
+    embed=discord.Embed(title="List of Commands", 
+    url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    description="Use rishabh <command> to execute a command",
+    color=discord.Color.random())
+
+    command_names_list=[x.name for x in bot.commands]
+    if not args:
+        embed.add_field(
+            name="List of supported commands:",
+            value="\n".join([str(i+1)+". "+x.name for i, x in enumerate(bot.commands)]),
+            inline=False
+        )
+        embed.add_field(
+            name="Details",
+            value="Type `rishabh help <command name>` for more details about each command.",
+            inline=False
+        )
+
+    elif args in command_names_list:
+        embed.add_field(
+            name=args,
+            value=bot.get_command(args).help
+        )
+    
+    else:
+        embed.add_field(
+            name="Nope.",
+            value="Don't think I got that command, boss!"
+        )
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def join(ctx):
+    channel=ctx.author.voice.channel
+    await channel.connect()
+
+@bot.command()
+async def leave(ctx):
+    await ctx.voice_client.disconnect()
 
 @bot.command()
 async def test(ctx):
@@ -129,7 +172,7 @@ async def wordle(ctx):
     tiles_msg = await ctx.send("Word picked. Start guessing...")
     check = lambda m: m.channel == ctx.channel and len(m.content) == 5
 
-    words_file = open("wordle_words.txt", "r")
+    words_file = open("new_wordle_words.txt", "r")
     word_list = words_file.read().split("\n")
     words_file.close()
     word_size = 5
@@ -192,7 +235,7 @@ async def scramble(ctx):
     
     scramble_game_state = True
 
-    words_file = open("wordle_words.txt", "r")
+    words_file = open("new_wordle_words.txt", "r")
     word_list = words_file.read().split("\n")
     words_file.close()
 
@@ -259,12 +302,28 @@ async def udefine(ctx, word: str):
 @bot.command()
 async def hololive(ctx):
     '''Random pic of your favorite Hololive'''
-    hololewd_submissions = reddit.subreddit('hololewd').hot()
-    post_to_pick = random.randint(1,100)
-    for i in range(0, post_to_pick):
-        submission = next(x for x in hololewd_submissions if not x.stickied)
+    subreddit = await reddit.subreddit('hololewd')
+    all_subs=[]
+    top=subreddit.top(limit=250)
+
+    async for submission in top:
+        all_subs.append(submission)
+
+    random_sub=random.choice(all_subs)
+
+    name=random_sub.title
+    url=random_sub.url
     
-    await ctx.send(submission.url)
+    embed = discord.Embed(title=f'__{name}__', color=discord.Color.random(), timestamp=ctx.message.created_at, url=url)
+    embed.set_image(url=url)
+    embed.set_footer(text='Here is your hololive!')
+    await ctx.send(embed=embed)
+    # hololewd_submissions = reddit.subreddit('hololewd').top()
+    # post_to_pick = random.randint(1,100)
+    # for i in range(0, post_to_pick):
+    #     submission = next(x for x in hololewd_submissions if not x.stickied)
+    
+    # await ctx.send(submission.url)
 
 
 load_dotenv()
