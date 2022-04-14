@@ -1,4 +1,5 @@
 from re import A
+from click import pass_context
 import discord
 import os
 import requests
@@ -16,6 +17,7 @@ from discord.ext import commands
 from discord.voice_client import VoiceClient
 from datetime import datetime
 from discord_components import DiscordComponents, Button, Interaction
+from googletrans import Translator
 
 intents = discord.Intents.default()
 intents.members = True
@@ -61,6 +63,13 @@ async def on_command_error(ctx, error):
         await ctx.channel.send(error)
     else:
         print(''.join(traceback.format_exception(type(error), error, error.__traceback__)))
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    targetID = bot.get_user(200828271749758978)
+
+    if before.channel is None and after.channel is not None and member.id == targetID.id: # Condition that must be fulfilled
+        await member.channel.connect() # Connect to the channel
 
 @bot.command()
 async def help(ctx, args=None):
@@ -119,6 +128,23 @@ async def ping(ctx):
     em.title = "Pong!"
     em.description = f'{bot.latency * 1000} ms'
     await ctx.send(embed=em)
+
+@bot.command()
+async def meesh(ctx):
+    '''Rishabh's gonna meesh!'''
+    await ctx.send("REEEEEEESH!!")
+
+@bot.command()
+async def dont_meesh(ctx):
+    '''Rishabh wants to meesh!!'''
+    await ctx.send("reeesh...")
+
+@bot.command(pass_context = True)
+async def translate(ctx, *, message):
+    '''Translates the following sentence into Japanese'''
+    translator = Translator()
+    translation = translator.translate(message, dest='ja')
+    await ctx.send(translation.text)
 
 @bot.command()
 @commands.cooldown(2, 5, commands.BucketType.user)
@@ -318,13 +344,6 @@ async def hololive(ctx):
     embed.set_image(url=url)
     embed.set_footer(text='Here is your hololive!')
     await ctx.send(embed=embed)
-    # hololewd_submissions = reddit.subreddit('hololewd').top()
-    # post_to_pick = random.randint(1,100)
-    # for i in range(0, post_to_pick):
-    #     submission = next(x for x in hololewd_submissions if not x.stickied)
-    
-    # await ctx.send(submission.url)
-
 
 load_dotenv()
 bot.run(os.getenv('DISCORD_TOKEN'))
