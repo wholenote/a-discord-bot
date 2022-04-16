@@ -6,3 +6,4 @@ discord.py
 discord-components
 nltk
 mysql-connector-python
+youtube-dl
