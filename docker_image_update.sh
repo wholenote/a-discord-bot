@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cd ~/a-discord-bot
+cd /home/pi/a-discord-bot
 
 sudo docker stop $(sudo docker ps -q)
 
